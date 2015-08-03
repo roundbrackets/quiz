@@ -22,6 +22,9 @@ foreach ($files as $name) {
         }
         $line = explode ("\t", $file[$j]);
         for ($i = 1; $i < count($line); $i++) { 
+            if ($i % 4 === 0) {
+                $line[$i] = $line[$i]%7;
+            }
             $line[$i] = ($line[$i] + rand(0, 100)) . ".00";
         }
         $new[] = implode("\t", $line);
