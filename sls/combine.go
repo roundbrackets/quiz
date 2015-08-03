@@ -10,9 +10,8 @@ import "strconv"
 import "sort"
 
 // D="../slsdir/primary/net/10a467f9158eb03510b0a99f0fab5074/";for i in `ls $D`;do grep -v "#" $D$i; done | sort | uniq | wc -l
-// 147
 
-type combiner struct {
+type Combiner struct {
 	entries     map[int]string
 	sortedIndex []int
 	headers     []string
@@ -29,11 +28,27 @@ type Combined struct {
 	Last     int
 }
 
-func newCombiner(basedir string, out string) *combiner {
-	l := new(combiner)
+func newCombiner(basedir string, out string) *Combiner {
+	l := new(Combiner)
 	l.basedir = basedir
 	l.out = out
 	return l
+}
+
+func Combine2(basedir string) (*Combiner, error) {
+	l := newCombiner(basedir, "")
+
+	err := l.files()
+	if err != nil {
+		return nil, err
+	}
+
+	err = l.proc()
+	if err != nil {
+		return nil, err
+	}
+
+    return l, nil
 }
 
 func Combine(basedir, out string) (*Combined, error) {
@@ -64,7 +79,7 @@ func Combine(basedir, out string) (*Combined, error) {
 	return combined, nil
 }
 
-func (c *combiner) files() error {
+func (c *Combiner) files() error {
 	files, err := ioutil.ReadDir(c.basedir)
 	c.logfiles = make([]string, 0, len(files))
 
@@ -85,7 +100,7 @@ func (c *combiner) files() error {
 	return err
 }
 
-func (c *combiner) proc() error {
+func (c *Combiner) proc() error {
 	c.entries = make(map[int]string)
 
 	for _, fileName := range c.logfiles {
@@ -107,7 +122,7 @@ func (c *combiner) proc() error {
 	return nil
 }
 
-func (c *combiner) write() error {
+func (c *Combiner) write() error {
 	f, err := os.Create(c.out)
 	if nil != err {
 		return err
@@ -129,7 +144,7 @@ func (c *combiner) write() error {
 	return nil
 }
 
-func (c *combiner) read(fileName string) error {
+func (c *Combiner) read(fileName string) error {
 	//fmt.Printf("Filename %s\n", fileName)
 
 	fh, err := os.Open(fileName)

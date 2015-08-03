@@ -14,8 +14,8 @@ const BASEDIR = "../slsdir/primary/net/"
 
 type Summary struct {
 	sample map[string]metrics.Sample
-	data   map[string][]int64
-	log    *Combined
+	//data   map[string][]int64
+	log *Combined
 }
 
 func NewSummary(log *Combined) *Summary {
@@ -26,10 +26,10 @@ func NewSummary(log *Combined) *Summary {
 
 func (l *Summary) initSample() {
 	l.sample = make(map[string]metrics.Sample)
-	l.data = make(map[string][]int64)
+	//l.data = make(map[string][]int64)
 	for _, name := range l.log.Headers {
 		l.sample[name] = metrics.NewUniformSample(l.log.RecCnt)
-		l.data[name] = make([]int64, l.log.RecCnt)
+		//l.data[name] = make([]int64, l.log.RecCnt)
 	}
 }
 
@@ -51,9 +51,8 @@ func (l *Summary) Summarize() {
 			//func Float64bits(f float64) uint64
 			value, _ := strconv.ParseFloat(field, 64)
 			value = math.Trunc(value)
-			//fmt.Printf("%s %v\n", name, value);
 			l.sample[name].Update(int64(value))
-			l.data[name][j] = int64(value)
+			//l.data[name][j] = int64(value)
 		}
 	}
 }
@@ -76,6 +75,7 @@ func (l *Summary) Report() {
 		fmt.Printf("\t%d", sample.Max())
 		fmt.Printf("\t%v", sample.Mean())
 		fmt.Printf("\t%v", sample.StdDev())
+		//fmt.Printf("\t%v", metrics.SampleStdDev(data[col]))
 		for _, v := range sample.Percentiles(ps[0:]) {
 			fmt.Printf("%.2f\t", v)
 		}
@@ -88,14 +88,12 @@ func main() {
 	out := fmt.Sprintf("%s/combined_logs", dir)
 
 	log, err := Combine(dir, out)
-
 	if err != nil {
 		fmt.Printf("%+v %T", err)
 		return
 	}
 
 	summary := NewSummary(log)
-
 	summary.Summarize()
 	summary.Report()
 }
