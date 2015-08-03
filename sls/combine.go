@@ -21,7 +21,7 @@ type combiner struct {
 	logfiles    []string
 	basedir     string
 	out         string
-    ts          string
+	ts          string
 }
 
 func newCombiner(basedir string) *combiner {
@@ -32,7 +32,7 @@ func newCombiner(basedir string) *combiner {
 
 func (l *combiner) initSample() {
 	l.sample = make(map[string]metrics.Sample)
-    size := len(l.entries)
+	size := len(l.entries)
 	for _, name := range l.headers {
 		l.sample[name] = metrics.NewUniformSample(size)
 	}
@@ -112,15 +112,15 @@ func (c *combiner) write() error {
 	defer f.Close()
 
 	w := bufio.NewWriter(f)
-    line := fmt.Sprintf("%s\t%s\n", c.ts, strings.Join(c.headers, "\t"))
+	line := fmt.Sprintf("%s\t%s\n", c.ts, strings.Join(c.headers, "\t"))
 	_, err = w.WriteString(line)
 	if nil != err {
 		return err
 	}
 	for _, i := range c.sortedIndex {
-        // Reducing to minimal column set by assuming it's the cols on the end 
-        // that's missing.
-        line := fmt.Sprintf("%v\t%s\n", i, strings.Join(c.entries[i][0:len(c.headers)], "\t"))
+		// Reducing to minimal column set by assuming it's the cols on the end
+		// that's missing.
+		line := fmt.Sprintf("%v\t%s\n", i, strings.Join(c.entries[i][0:len(c.headers)], "\t"))
 		_, err = w.WriteString(line)
 		if nil != err {
 			return err
@@ -143,12 +143,12 @@ func (c *combiner) read(fileName string) error {
 		//fmt.Print(line)
 		if j == 0 {
 			fields := strings.Fields(string(line))
-            if len(c.headers) == 0 {
-                c.ts      = fields[0]
-			    c.headers = fields[1:]
-            } else if len(c.headers) > len(fields[1:]) {
-			    c.headers = fields[1:]
-            }
+			if len(c.headers) == 0 {
+				c.ts = fields[0]
+				c.headers = fields[1:]
+			} else if len(c.headers) > len(fields[1:]) {
+				c.headers = fields[1:]
+			}
 		} else if j > 1 {
 			fields := strings.Fields(line)
 			ts, _ := strconv.ParseInt(fields[0], 10, 64)
@@ -159,10 +159,8 @@ func (c *combiner) read(fileName string) error {
 	return nil
 }
 
-
-
 // Creates a combined dataset
-func Summarize (basedir string) (string, error) {
+func Summarize(basedir string) (string, error) {
 	l := newCombiner(basedir)
 
 	err := l.files()
@@ -177,14 +175,14 @@ func Summarize (basedir string) (string, error) {
 
 	l.initSample()
 
-    hcnt := len(l.headers)
+	hcnt := len(l.headers)
 
-    for _, ts := range l.sortedIndex {
+	for _, ts := range l.sortedIndex {
 		for i, field := range l.entries[ts] {
-            // Adjust for the smallest set.
-            if i >= hcnt {
-                break
-            }
+			// Adjust for the smallest set.
+			if i >= hcnt {
+				break
+			}
 			name := l.headers[i]
 
 			// It isn't clear to me how to utilize the metrics library
@@ -197,11 +195,11 @@ func Summarize (basedir string) (string, error) {
 		}
 	}
 
-    return l.report(), nil
+	return l.report(), nil
 }
 
 func (l *combiner) report() string {
-    var report string
+	var report string
 	ps := [5]float64{0.50, 0.75, 0.95, 0.99, 0.999}
 
 	report = fmt.Sprintf("col\tperiod\tcount\tmin\tmax\tmean\tstddev")
@@ -209,8 +207,8 @@ func (l *combiner) report() string {
 		report += fmt.Sprintf("\t%d-precentile", int(p*100))
 	}
 	report += fmt.Sprintf("\n")
-    start := l.sortedIndex[0]
-    end := l.sortedIndex[len(l.sortedIndex)-1]
+	start := l.sortedIndex[0]
+	end := l.sortedIndex[len(l.sortedIndex)-1]
 
 	for col, sample := range l.sample {
 		report += fmt.Sprintf("%s", col)
@@ -219,7 +217,7 @@ func (l *combiner) report() string {
 		report += fmt.Sprintf("\t%d", sample.Size())
 		report += fmt.Sprintf("\t%d", sample.Min())
 		report += fmt.Sprintf("\t%d", sample.Max())
-        // The values for mean and std dev are unweildy, but I don't know
+		// The values for mean and std dev are unweildy, but I don't know
 		// enough round them properly.
 		report += fmt.Sprintf("\t%v", sample.Mean())
 		report += fmt.Sprintf("\t%v", sample.StdDev())
@@ -229,5 +227,5 @@ func (l *combiner) report() string {
 		report += fmt.Sprintf("\n")
 	}
 
-    return report
+	return report
 }

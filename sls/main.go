@@ -10,29 +10,29 @@ func main() {
 	dir, _ := InDir(BASEDIR)
 	out := fmt.Sprintf("%s/combined_logs", dir)
 
-    // Write to a file
+	// Write to a file
 	err := Combine(dir, out)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 
-    log, err := ioutil.ReadFile(out)
+	log, err := ioutil.ReadFile(out)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
-    fmt.Println(out)
-    fmt.Println(string(log))
+	fmt.Println(out)
+	fmt.Println(string(log))
 
-    // Or, make a summary
+	// Or, make a summary
 	data, err := Summarize(dir)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 
-    fmt.Println(data)
+	fmt.Println(data)
 }
 
 func InDir(basedir string) (string, error) {
