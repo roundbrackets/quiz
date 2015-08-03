@@ -168,7 +168,8 @@ func (l *combiner) report() string {
 	start := l.sortedIndex[0]
 	end := l.sortedIndex[len(l.sortedIndex)-1]
 
-	for col, sample := range l.sample {
+	for _, col := range l.headers {
+		sample := l.sample[col]
 		report += fmt.Sprintf("%s", col)
 		report += fmt.Sprintf("\t%d - %d", start, end)
 
