@@ -61,105 +61,7 @@ func Combine(basedir, out string) error {
 	return nil
 }
 
-func (c *combiner) files() error {
-	files, err := ioutil.ReadDir(c.basedir)
-	c.logfiles = make([]string, 0, len(files))
-
-	if err == nil {
-		for _, fi := range files {
-			if !fi.IsDir() {
-				match, err := regexp.MatchString("^[0-9]+.*$", fi.Name())
-				if err != nil {
-					return err
-				}
-				if match {
-					c.logfiles = append(c.logfiles, fmt.Sprintf("%s/%s", c.basedir, fi.Name()))
-				}
-			}
-		}
-	}
-
-	return err
-}
-
-func (c *combiner) proc() error {
-	c.entries = make(map[int][]string)
-
-	for _, fileName := range c.logfiles {
-		err := c.read(fileName)
-		if err != nil {
-			return err
-		}
-	}
-
-	keys := make([]int, len(c.entries))
-	i := 0
-	for k, _ := range c.entries {
-		keys[i] = k
-		i++
-	}
-	sort.Ints(keys)
-	c.sortedIndex = keys
-
-	return nil
-}
-
-func (c *combiner) write() error {
-	f, err := os.Create(c.out)
-	if nil != err {
-		return err
-	}
-	defer f.Close()
-
-	w := bufio.NewWriter(f)
-	line := fmt.Sprintf("%s\t%s\n", c.ts, strings.Join(c.headers, "\t"))
-	_, err = w.WriteString(line)
-	if nil != err {
-		return err
-	}
-	for _, i := range c.sortedIndex {
-		// Reducing to minimal column set by assuming it's the cols on the end
-		// that's missing.
-		line := fmt.Sprintf("%v\t%s\n", i, strings.Join(c.entries[i][0:len(c.headers)], "\t"))
-		_, err = w.WriteString(line)
-		if nil != err {
-			return err
-		}
-	}
-	w.Flush()
-	return nil
-}
-
-func (c *combiner) read(fileName string) error {
-	fh, err := os.Open(fileName)
-	if err != nil {
-		return err
-	}
-	defer fh.Close()
-
-	scanner := bufio.NewScanner(fh)
-	for j := 0; scanner.Scan(); j++ {
-		line := scanner.Text()
-		//fmt.Print(line)
-		if j == 0 {
-			fields := strings.Fields(string(line))
-			if len(c.headers) == 0 {
-				c.ts = fields[0]
-				c.headers = fields[1:]
-			} else if len(c.headers) > len(fields[1:]) {
-				c.headers = fields[1:]
-			}
-		} else if j > 1 {
-			fields := strings.Fields(line)
-			ts, _ := strconv.ParseInt(fields[0], 10, 64)
-			c.entries[int(ts)] = fields[1:]
-		}
-	}
-	// check for scanner errors
-	return nil
-}
-
-// Creates a combined dataset
+// Creates a summary from a set of log files.
 func Summarize(basedir string) (string, error) {
 	l := newCombiner(basedir)
 
@@ -198,6 +100,62 @@ func Summarize(basedir string) (string, error) {
 	return l.report(), nil
 }
 
+func (c *combiner) write() error {
+	f, err := os.Create(c.out)
+	if nil != err {
+		return err
+	}
+	defer f.Close()
+
+	w := bufio.NewWriter(f)
+	// c.ts contains the name of the timestamp field.
+	line := c.ts + "\t" + strings.Join(c.headers, "\t") + "\n"
+	_, err = w.WriteString(line)
+	if nil != err {
+		return err
+	}
+	for _, i := range c.sortedIndex {
+		// Reducing to minimal column set by assuming it's the cols on the end
+		// that's missing. The first col is timestamp.
+		line := string(i) + "\t" + strings.Join(c.entries[i][0:len(c.headers)], "\t") + "\n"
+		_, err = w.WriteString(line)
+		if nil != err {
+			return err
+		}
+	}
+	w.Flush()
+	return nil
+}
+
+// Reads a log file.
+func (c *combiner) read(fileName string) error {
+	fh, err := os.Open(fileName)
+	if err != nil {
+		return err
+	}
+	defer fh.Close()
+
+	scanner := bufio.NewScanner(fh)
+	for j := 0; scanner.Scan(); j++ {
+		line := scanner.Text()
+		if j == 0 {
+			fields := strings.Fields(string(line))
+			if len(c.headers) == 0 {
+				c.ts = fields[0]
+				c.headers = fields[1:]
+			} else if len(c.headers) > len(fields[1:]) {
+				c.headers = fields[1:]
+			}
+		} else if j > 1 {
+			fields := strings.Fields(line)
+			ts, _ := strconv.ParseInt(fields[0], 10, 64)
+			c.entries[int(ts)] = fields[1:]
+		}
+	}
+	// check for scanner errors
+	return nil
+}
+
 func (l *combiner) report() string {
 	var report string
 	ps := [5]float64{0.50, 0.75, 0.95, 0.99, 0.999}
@@ -229,3 +187,52 @@ func (l *combiner) report() string {
 
 	return report
 }
+
+// Find log files to process.
+func (c *combiner) files() error {
+	files, err := ioutil.ReadDir(c.basedir)
+	c.logfiles = make([]string, 0, len(files))
+
+	if err == nil {
+		for _, fi := range files {
+			if !fi.IsDir() {
+				match, err := regexp.MatchString("^[0-9]+.*$", fi.Name())
+				if err != nil {
+					return err
+				}
+				if match {
+					c.logfiles = append(c.logfiles, fmt.Sprintf("%s/%s", c.basedir, fi.Name()))
+				}
+			}
+		}
+	}
+
+	return err
+}
+
+// Process the log files and create a sorted index.
+func (c *combiner) proc() error {
+	// timestamp -> data
+	c.entries = make(map[int][]string)
+
+	for _, fileName := range c.logfiles {
+		err := c.read(fileName)
+		if err != nil {
+			return err
+		}
+	}
+
+	// Make a index sorted by timestamp.
+	keys := make([]int, len(c.entries))
+	i := 0
+	for k, _ := range c.entries {
+		keys[i] = k
+		i++
+	}
+	sort.Ints(keys)
+	c.sortedIndex = keys
+
+	return nil
+}
+
+// Write data to a file.
