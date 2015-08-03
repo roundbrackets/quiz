@@ -1,7 +1,5 @@
 package main
 
-import "io/ioutil"
-import "regexp"
 import "fmt"
 import "os"
 import "bufio"
@@ -16,28 +14,21 @@ type fcombiner struct {
 	hist    *histogram
 	entries map[string][]string
 	headers []string
-	basedir string
 	start   int64
 	end     int64
 }
 
-func newFcombiner(basedir string) *fcombiner {
+func newFcombiner() *fcombiner {
 	l := new(fcombiner)
-	l.basedir = basedir
 	l.entries = make(map[string][]string)
 	return l
 }
 
 // Creates a summary from a set of log files.
-func Fsummarize(basedir string) (string, error) {
-	l := newFcombiner(basedir)
+func Fsummarize(logfiles []string) (string, error) {
+	l := newFcombiner()
 
-	logfiles, err := l.files()
-	if err != nil {
-		return "", err
-	}
-
-	err = l.proc(logfiles)
+	err := l.proc(logfiles)
 	if err != nil {
 		return "", err
 	}
@@ -71,28 +62,6 @@ func (c *fcombiner) read(fileName string) error {
 
 	// check for scanner errors
 	return nil
-}
-
-// Find log files to process.
-func (c *fcombiner) files() ([]string, error) {
-	files, err := ioutil.ReadDir(c.basedir)
-	logfiles := make([]string, 0, len(files))
-
-	if err == nil {
-		for _, fi := range files {
-			if !fi.IsDir() {
-				match, err := regexp.MatchString("^[0-9]+.*$", fi.Name())
-				if err != nil {
-					return nil, err
-				}
-				if match {
-					logfiles = append(logfiles, fmt.Sprintf("%s/%s", c.basedir, fi.Name()))
-				}
-			}
-		}
-	}
-
-	return logfiles, err
 }
 
 // Process the log files and create a sorted index.

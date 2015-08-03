@@ -1,7 +1,5 @@
 package main
 
-import "io/ioutil"
-import "regexp"
 import "fmt"
 import "os"
 import "bufio"
@@ -19,15 +17,8 @@ type combiner struct {
 	sortedIndex []int
 	headers     []string
 	logfiles    []string
-	basedir     string
 	out         string
 	ts          string
-}
-
-func newCombiner(basedir string) *combiner {
-	l := new(combiner)
-	l.basedir = basedir
-	return l
 }
 
 func (l *combiner) initSample() {
@@ -39,16 +30,12 @@ func (l *combiner) initSample() {
 }
 
 // Creates a combined log file
-func Combine(basedir, out string) error {
-	l := newCombiner(basedir)
+func Combine(logfiles []string, out string) error {
+	l := new(combiner)
+	l.logfiles = logfiles
 	l.out = out
 
-	err := l.files()
-	if err != nil {
-		return err
-	}
-
-	err = l.proc()
+	err := l.proc()
 	if err != nil {
 		return err
 	}
@@ -62,15 +49,11 @@ func Combine(basedir, out string) error {
 }
 
 // Creates a summary from a set of log files.
-func Summarize(basedir string) (string, error) {
-	l := newCombiner(basedir)
+func Summarize(logfiles []string) (string, error) {
+	l := new(combiner)
+	l.logfiles = logfiles
 
-	err := l.files()
-	if err != nil {
-		return "", err
-	}
-
-	err = l.proc()
+	err := l.proc()
 	if err != nil {
 		return "", err
 	}
@@ -187,28 +170,6 @@ func (l *combiner) report() string {
 	}
 
 	return report
-}
-
-// Find log files to process.
-func (c *combiner) files() error {
-	files, err := ioutil.ReadDir(c.basedir)
-	c.logfiles = make([]string, 0, len(files))
-
-	if err == nil {
-		for _, fi := range files {
-			if !fi.IsDir() {
-				match, err := regexp.MatchString("^[0-9]+.*$", fi.Name())
-				if err != nil {
-					return err
-				}
-				if match {
-					c.logfiles = append(c.logfiles, fmt.Sprintf("%s/%s", c.basedir, fi.Name()))
-				}
-			}
-		}
-	}
-
-	return err
 }
 
 // Process the log files and create a sorted index.
