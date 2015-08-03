@@ -14,8 +14,8 @@ const BASEDIR = "../slsdir/primary/net/"
 
 type Summary struct {
 	sample map[string]metrics.Sample
-    // I started using metrics.Sample, then realized I could have used a map of 
-    // arrays, I'd just have to type more. 
+	// I started using metrics.Sample, then realized I could have used a map of
+	// arrays, I'd just have to type more.
 	//data   map[string][]int64
 	log *Combined
 }
@@ -35,7 +35,7 @@ func (l *Summary) initSample() {
 	}
 }
 
-// You could, rather than write the intermidiate file, have the combiner return 
+// You could, rather than write the intermidiate file, have the combiner return
 // the combined data.
 func (l *Summary) Summarize() {
 	l.initSample()
@@ -53,10 +53,10 @@ func (l *Summary) Summarize() {
 			}
 			name := l.log.Headers[i]
 
-            // It isn't clear to me how to utilize the metrics library
-            // when working with floats, so I decided to truncate them.
-            // I found this Float64bits(f float64) uint64, but an unsigned 
-            // integer is about as helpful as a float.
+			// It isn't clear to me how to utilize the metrics library
+			// when working with floats, so I decided to truncate them.
+			// I found this Float64bits(f float64) uint64, but an unsigned
+			// integer is about as helpful as a float.
 			value, _ := strconv.ParseFloat(field, 64)
 			value = math.Trunc(value)
 			l.sample[name].Update(int64(value))
@@ -81,8 +81,8 @@ func (l *Summary) Report() {
 		fmt.Printf("\t%d", sample.Size())
 		fmt.Printf("\t%d", sample.Min())
 		fmt.Printf("\t%d", sample.Max())
-        // The values for mean and std dev seem unweildy, but I don't know 
-        // enough round them properly.
+		// The values for mean and std dev seem unweildy, but I don't know
+		// enough round them properly.
 		fmt.Printf("\t%v", sample.Mean())
 		fmt.Printf("\t%v", sample.StdDev())
 		//fmt.Printf("\t%v", metrics.SampleStdDev(data[col]))
