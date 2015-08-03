@@ -17,51 +17,51 @@ type combiner struct {
 	sortedIndex []int
 	headers     []string
 	logfiles    []string
-    basedir     string
-    out         string
+	basedir     string
+	out         string
 }
 
 type Combined struct {
-    Filename string
-    Headers []string
-    RecCnt int
-    First int
-    Last int
+	Filename string
+	Headers  []string
+	RecCnt   int
+	First    int
+	Last     int
 }
 
-func newCombiner (basedir string, out string) *combiner {
-    l := new (combiner)
-    l.basedir = basedir
-    l.out = out
-    return l
+func newCombiner(basedir string, out string) *combiner {
+	l := new(combiner)
+	l.basedir = basedir
+	l.out = out
+	return l
 }
 
-func Combine (basedir, out string) (*Combined, error) {
-    l := newCombiner(basedir, out)
+func Combine(basedir, out string) (*Combined, error) {
+	l := newCombiner(basedir, out)
 
 	err := l.files()
 	if err != nil {
-        return nil, err
+		return nil, err
 	}
 
 	err = l.proc()
 	if err != nil {
-        return nil, err
+		return nil, err
 	}
 
 	err = l.write()
 	if err != nil {
-        return nil, err
+		return nil, err
 	}
 
-    combined := new (Combined)
-    combined.Filename = l.out
-    combined.Headers = l.headers
-    combined.RecCnt = len(l.entries)
-    combined.First = l.sortedIndex[0]
-    combined.Last = l.sortedIndex[len(l.sortedIndex)-1]
+	combined := new(Combined)
+	combined.Filename = l.out
+	combined.Headers = l.headers
+	combined.RecCnt = len(l.entries)
+	combined.First = l.sortedIndex[0]
+	combined.Last = l.sortedIndex[len(l.sortedIndex)-1]
 
-    return combined, nil
+	return combined, nil
 }
 
 func (c *combiner) files() error {
@@ -73,7 +73,7 @@ func (c *combiner) files() error {
 			if !fi.IsDir() {
 				match, err := regexp.MatchString("^[0-9]+.*$", fi.Name())
 				if err != nil {
-                    return err
+					return err
 				}
 				if match {
 					c.logfiles = append(c.logfiles, fmt.Sprintf("%s/%s", c.basedir, fi.Name()))
@@ -86,13 +86,13 @@ func (c *combiner) files() error {
 }
 
 func (c *combiner) proc() error {
-    c.entries = make(map[int]string)
+	c.entries = make(map[int]string)
 
 	for _, fileName := range c.logfiles {
-        err := c.read(fileName)
-        if err != nil {
-            return err
-        }
+		err := c.read(fileName)
+		if err != nil {
+			return err
+		}
 	}
 
 	keys := make([]int, len(c.entries))
@@ -104,7 +104,7 @@ func (c *combiner) proc() error {
 	sort.Ints(keys)
 	c.sortedIndex = keys
 
-    return nil
+	return nil
 }
 
 func (c *combiner) write() error {
@@ -116,43 +116,43 @@ func (c *combiner) write() error {
 
 	w := bufio.NewWriter(f)
 	for _, i := range c.sortedIndex {
-        //_, err = w.WriteString(fmt.Sprintf("%d\t%s\n", i, strings.Join(data.entries[i], "\t")))
-        line := fmt.Sprintf("%s\n", c.entries[i])
-        //ne[len(fields[0])+1:]fmt.Printf("%s %v\n", line, i)
-        _, err = w.WriteString(line)
+		//_, err = w.WriteString(fmt.Sprintf("%d\t%s\n", i, strings.Join(data.entries[i], "\t")))
+		line := fmt.Sprintf("%s\n", c.entries[i])
+		//ne[len(fields[0])+1:]fmt.Printf("%s %v\n", line, i)
+		_, err = w.WriteString(line)
 		if nil != err {
-            // delete file?
+			// delete file?
 			return err
 		}
 	}
 	w.Flush()
-    return nil
+	return nil
 }
 
-func (c *combiner) read (fileName string) error {
-        //fmt.Printf("Filename %s\n", fileName)
+func (c *combiner) read(fileName string) error {
+	//fmt.Printf("Filename %s\n", fileName)
 
-		fh, err := os.Open(fileName)
-        if err != nil {
-            return err
-        }
-        defer fh.Close()
+	fh, err := os.Open(fileName)
+	if err != nil {
+		return err
+	}
+	defer fh.Close()
 
-		scanner := bufio.NewScanner(fh)
-		for j := 0; scanner.Scan(); j++ {
-			line := scanner.Text()
-            //fmt.Print(line)
-			if j == 0 {
-				fields := strings.Fields(string(line))
-				c.headers = fields[2:]
-			} else if j > 1 {
-				fields := strings.Fields(line)
-				ts, _ := strconv.ParseInt(fields[0], 10, 64)
-                c.entries[int(ts)] = line[len(fields[0])+1:]
-                //fmt.Printf("%s %v\n", int(ts), line[len(fields[0])+1:])
-                //strings.Join(fields[1:], "\t")
-			}
+	scanner := bufio.NewScanner(fh)
+	for j := 0; scanner.Scan(); j++ {
+		line := scanner.Text()
+		//fmt.Print(line)
+		if j == 0 {
+			fields := strings.Fields(string(line))
+			c.headers = fields[2:]
+		} else if j > 1 {
+			fields := strings.Fields(line)
+			ts, _ := strconv.ParseInt(fields[0], 10, 64)
+			c.entries[int(ts)] = line[len(fields[0])+1:]
+			//fmt.Printf("%s %v\n", int(ts), line[len(fields[0])+1:])
+			//strings.Join(fields[1:], "\t")
 		}
-        // check for scanner errors
-        return nil
+	}
+	// check for scanner errors
+	return nil
 }
