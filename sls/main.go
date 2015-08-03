@@ -3,6 +3,7 @@ package main
 import "fmt"
 import "io/ioutil"
 import "regexp"
+import "github.com/roundbrackets/quiz/sls/fsummary" // float metrics
 
 const BASEDIR = "../slsdir/primary/net/"
 
@@ -27,6 +28,15 @@ func main() {
 
 	// Or, make a summary
 	data, err := Summarize(dir)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	fmt.Println(data)
+
+    // Or, make a float summary
+	data, err = fsummary.Summarize(dir)
 	if err != nil {
 		fmt.Println(err)
 		return
